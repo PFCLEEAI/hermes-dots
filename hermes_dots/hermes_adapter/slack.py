@@ -48,10 +48,29 @@ class SlackClient:
             if not cursor: return result
 
 
+class OnboardingServices:
+    """Settings answers use settings; the first responsibility uses task intake."""
+    def __init__(self, transport):
+        self.transport = transport
+
+    def propose_change(self, key, value):
+        if key != "first_responsibility":
+            return self.transport.runtime.settings.propose_change(key, value)
+        card = self.transport.runtime.engine.intake(value)
+        self.transport.card(card)
+        return {"task_id": card.id, "revision": card.revision}
+
+    def confirm_change(self, proposal):
+        if "task_id" not in proposal:
+            return self.transport.runtime.settings.confirm_change(proposal)
+        task = self.transport.runtime.engine.confirm(proposal["task_id"], proposal["revision"])
+        return {"reply": f"Confirmed task #{task.id}."}
+
+
 class SlackRuntime:
     def __init__(self, runtime, ctx, native):
         self.runtime, self.ctx, self.native = runtime, ctx, native
-        self.onboarding = Onboarding(runtime.settings, owner_id=runtime.config["owner_slack_id"])
+        self.onboarding = Onboarding(OnboardingServices(self), owner_id=runtime.config["owner_slack_id"])
         self.channel = runtime.config.get("owner_channel", runtime.config["owner_slack_id"])
         self.connected = False
 

@@ -36,7 +36,9 @@ class DigestComposer:
             items = [item for item in items if item is not None and item != ""]
             for item in items:
                 if isinstance(item, dict):
-                    text.append(str(item.get("text", "")))
+                    text.append(str(item.get("text", item.get("summary", item.get("line", item)))))
+                    if item.get("recommendation"):
+                        text.append(str(item["recommendation"]))
                     buttons.extend(item.get("buttons", ()))
                 elif item is not None:
                     text.append(str(item))
