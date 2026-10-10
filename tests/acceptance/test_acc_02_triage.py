@@ -6,6 +6,10 @@ from .invariants import assert_invariants
 
 def test_all_practice_mail_and_injection_boundaries(scenario, practice_mail, expected_mail):
     s = scenario
+    for key in ("vip-en", "vip-ko", "deadline-en", "deadline-ko", "deadline-update-en", "deadline-update-ko"):
+        assert s.model.fake.responses[key][0]["category"] == "regular"
+    for key in ("injection-en", "injection-ko"):
+        assert s.model.fake.responses[key][0]["injection_ignored"] is False
     s.settings.confirm_change(s.settings.propose_change("vips", ["vip@example.com"]))
     # Connect empty so the subsequent fake history includes sent reply pairs too.
     assert s.mail.poll() == () and s.model.fake.calls == 0

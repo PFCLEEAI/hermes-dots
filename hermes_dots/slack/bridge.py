@@ -64,13 +64,16 @@ class SlackBridge:
         self.threads = {}
         self.cards = {}
 
-    def bind_card(self, channel: str, thread_ts: str, task_id: str, revision: int) -> None:
+    def bind_card(self, channel: str, thread_ts: str, task_id: str, revision: int, *, updated=False) -> None:
         if not channel or not thread_ts or not task_id or revision < 1:
             raise ValueError("A card binding needs channel, thread, task and revision")
         binding = Binding(task_id, revision)
         key = (channel, thread_ts)
         if key in self.threads and self.threads[key] != binding:
-            raise ValueError("A thread's task and revision cannot change")
+            old = self.threads[key]
+            # Mail cards are edited in place after a confirmed delivery.
+            if not (updated and task_id.startswith("MAIL-") and old.task_id == task_id and revision > old.revision):
+                raise ValueError("A thread's task and revision cannot change")
         self.threads[key] = binding
         previous = self.cards.get((channel, task_id))
         if previous is None or revision >= previous.revision:

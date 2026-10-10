@@ -16,20 +16,20 @@ An open-source plugin pack on stock [Hermes Agent](https://github.com/NousResear
 - **Proactive follow-ups.** Confirm a task card, then Orca picks check-back times with reasons. Questions include a recommendation; nudges respect quiet hours while other allowed work continues. Done means a summary with evidence.
 - **Email watching.** Urgent mail gets a ping; regular and uncertain mail goes into a digest; noise gets a count. Reply drafts stay on Slack cards for you to copy. Practice mail is in Korean and English; the Gmail read-only adapter is tested with mocks.
 - **Settings by chat.** Change timing, VIPs, limits, display name, and action rules through a confirm-and-save conversation.
-- **Safe by default.** An isolated home, Docker for code, denied paths, owner-only commands, and single-use approvals for specific outside actions. Email sending is outside v1.
+- **Safe by default.** An isolated home, Docker for code, denied paths, owner-only commands, and known outside-action tools blocked by default. Outside actions cannot yet be approved; email can never be sent in v1.
 
 ## Quickstart
 
-macOS first. Have Python 3.11+, Git, Docker Desktop, a Slack workspace you can install an app into, and your chosen Hermes model provider available.
+macOS first. Have Python 3.11–3.13, Git, Docker Desktop, a Slack workspace you can install an app into, and your chosen Hermes model provider available.
 
 ```bash
 git clone https://github.com/PFCLEEAI/hermes-dots.git
 cd hermes-dots
-python3 scripts/install.py --home ~/.hermes-dots
+python3 scripts/install.py --home ~/.hermes-dots --owner-slack-id "<your Slack member ID>"
 ```
 
-1. **Install separately.** The installer uses Hermes `v2026.9.24` in the dots home, creates the Orca profile, and refuses `~/.hermes` and existing profiles. Follow the installer output for the isolated environment; keep all setup commands pointed at that home.
-2. **Connect Slack.** Create one app for your workspace using the pinned Hermes Slack setup, configure Socket Mode and direct messages, and store credentials only in the local protected secrets file or keychain. Set your own Slack member ID as the sole owner. See [install details](docs/install.md#connect-slack).
+1. **Install separately.** Replace the Slack member ID placeholder with your own ID. The installer uses Hermes `v2026.9.24` in the dots home and copies the current dots working tree unless you supply an exact `--pack-ref` commit. It creates the Orca profile, copies invented practice mail, creates an empty `0600` `secrets.env` template, and refuses `~/.hermes` and existing profiles. Keep all setup commands pointed at that home.
+2. **Connect Slack.** Create one app for your workspace using the pinned Hermes Slack setup and configure Socket Mode and direct messages. Store credentials only in the local protected secrets file or keychain; the empty template is not loaded automatically. The installer stores your Slack member ID as the sole owner. See [install details](docs/install.md#connect-slack).
 3. **Chat with Orca.** Complete onboarding: time zone, quiet hours, digest times, optional VIPs, and your first responsibility. Start with “Watch the practice inbox.” Review and confirm the task card before work starts.
 
 **Gmail read-only later:** v1 builds and mock-tests the adapter; it does not connect a real mailbox during the build. A later owner-authorized connection must use only `gmail.readonly`. It will not label, mark as read, create Gmail drafts, or send mail.
@@ -49,8 +49,8 @@ Orca proposes the new value, waits for your confirmation, saves it, and reports 
 
 ## Safety model
 
-- **Isolation:** separate `HERMES_HOME` and kanban home. `~/.hermes` is always denied; extra denied paths can only be added. Code runs in non-persistent Docker containers without credential mounts.
-- **Authority:** reading, research, writing in Orca's space, sandbox code, and temporary helpers are allowed by default. Sending or posting to anyone but you, deletion outside scratch, spending, and account changes ask first and can never become `auto`. Approval binds the action, target, content, and card revision; it is consumed once.
+- **Isolation:** separate `HERMES_HOME` and kanban home. `~/.hermes` is always denied; extra denied paths can only be added. Code runs in non-persistent Docker containers without credential mounts. The sandbox has network access for research; it is not a network isolation boundary.
+- **Authority:** reading, research, writing in Orca's space, sandbox code, and temporary helpers are allowed by default. Known tools for outside sending/posting, deletion outside scratch, spending, and account changes are blocked by default and cannot yet be approved through the running product; that approval flow is for a later version. Tool-name checks do not cover arbitrary network calls from sandbox code. Email can never be sent in v1; the mail adapter is read-only.
 - **Privacy:** secrets stay local and are redacted from notes, logs, prompts, and tool results. Only necessary excerpts reach your configured model provider. Email, web pages, and files are data, never permission to change rules.
 - **Memory control:** “forget” removes notes and search entries and suppresses re-learning; retained logs stay intact. Logs are kept forever unless you set retention. Skill and prompt changes are proposals for you to approve.
 - **Recovery:** interrupted work is reported, uncertain deliveries remain visible, and missed scheduled runs are listed rather than caught up automatically. Health and usage limits pause affected work.

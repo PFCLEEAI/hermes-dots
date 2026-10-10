@@ -124,9 +124,12 @@ class QuietHoursDispatcher:
     def dispatch(self, channel: str, text: str, *, idempotency_key: str,
                  delivery_id: str | None = None, ping: bool = True,
                  thread_ts: str | None = None, buttons: Sequence[dict] = (),
-                 task_id: str | None = None) -> OutboxEffect:
+                 task_id: str | None = None, card_id: str | None = None,
+                 revision: int | None = None) -> OutboxEffect:
         payload = redact_payload({"text": text, "ping": ping, "thread_ts": thread_ts,
                                   "buttons": buttons})
+        if card_id is not None:
+            payload.update(card_id=card_id, revision=revision)
         with self.ledger.transaction():
             effect = self.ledger.enqueue_effect(OutboxEffect(
                 delivery_id or f"dots-{uuid4().hex}", idempotency_key,

@@ -8,6 +8,7 @@ import json
 from hermes_dots.engine.support import clean
 from hermes_dots.slack.delivery import QuietHours, QuietHoursDispatcher
 from hermes_dots.slack.render import render_card
+from hermes_dots.inbox.service import MailCardReconciler
 from hermes_dots.slack.onboarding import Onboarding
 
 
@@ -30,7 +31,7 @@ class SlackClient:
     def post(self, text, *, channel, thread_ts=None, buttons=(), metadata=None):
         response = self._call("chat_postMessage", channel=channel, text=text, thread_ts=thread_ts,
                               blocks=self.blocks(text, buttons), metadata=metadata)
-        if response.get("ts"): self.channels[response["ts"]] = channel
+        if response.get("ts"): self.channels[response["ts"]] = response.get("channel", channel)
         return response
 
     def update(self, ts, *, text=None, buttons=(), channel=None):
@@ -55,13 +56,17 @@ class OnboardingServices:
 
     def propose_change(self, key, value):
         if key != "first_responsibility":
-            return self.transport.runtime.settings.propose_change(key, value)
+            proposal = self.transport.runtime.settings.propose_change(key, value)
+            self.transport.settings_card(proposal)
+            return proposal
         card = self.transport.runtime.engine.intake(value)
         self.transport.card(card)
         return {"task_id": card.id, "revision": card.revision}
 
     def confirm_change(self, proposal):
         if "task_id" not in proposal:
+            if proposal["name"] == "vips":
+                return self.transport.runtime.mail.confirm_vip(proposal)
             return self.transport.runtime.settings.confirm_change(proposal)
         task = self.transport.runtime.engine.confirm(proposal["task_id"], proposal["revision"])
         return {"reply": f"Confirmed task #{task.id}."}
@@ -71,7 +76,10 @@ class SlackRuntime:
     def __init__(self, runtime, ctx, native):
         self.runtime, self.ctx, self.native = runtime, ctx, native
         self.onboarding = Onboarding(OnboardingServices(self), owner_id=runtime.config["owner_slack_id"])
-        self.channel = runtime.config.get("owner_channel", runtime.config["owner_slack_id"])
+        saved = runtime.engine._control("dots_onboarding", {})
+        self.onboarding.index = saved.get("index", 0)
+        self.onboarding.pending = saved.get("pending")
+        self.channel = runtime.engine.owner_channel
         self.connected = False
 
     def attach(self):
@@ -81,6 +89,7 @@ class SlackRuntime:
         self.dispatcher = QuietHoursDispatcher(self.runtime.ledger, client,
                                               quiet_hours=QuietHours(*settings.get("quiet_hours"), timezone=settings.get("timezone")),
                                               now=lambda: datetime.now(timezone.utc))
+        self.dispatcher.reconciler = MailCardReconciler(client)
         self.runtime.mail.dispatcher = self.dispatcher
         self.runtime.delivery = self.dispatcher
         self.runtime.transport = self
@@ -125,9 +134,67 @@ class SlackRuntime:
         for effect in self.runtime.ledger.list_effects():
             if effect.state != "sent": continue
             self.connected = True
-            if effect.task_id:
-                task = self.runtime.ledger.get_task(effect.task_id)
-                self.runtime.bridge.bind_card(effect.channel, effect.receipt, task.id, task.card_revision)
+            self.bind_effect(effect)
+
+    def bind_effect(self, effect):
+        if not effect.receipt:
+            return
+        card_id, revision = effect.payload.get("card_id"), effect.payload.get("revision")
+        if not card_id:
+            # Older deliveries still carry their send-time revision in buttons.
+            buttons = effect.payload.get("buttons", ())
+            if not buttons:
+                return
+            try:
+                value = json.loads(buttons[0]["value"])
+                card_id, revision = value["task_id"], value["revision"]
+            except (KeyError, TypeError, ValueError):
+                return  # A digest or other non-card delivery.
+        client = self.dispatcher.reconciler.client
+        channel = getattr(client, "channels", {}).get(effect.receipt, effect.channel)
+        key = (channel, effect.receipt)
+        existing = self.runtime.bridge.threads.get(key)
+        if existing:
+            if existing.task_id == card_id and existing.revision >= revision:
+                return
+            if not card_id.startswith("MAIL-"):
+                return
+        self.runtime.bridge.bind_card(channel, effect.receipt, card_id, revision,
+                                      updated=effect.payload.get("mail_operation") == "card")
+
+    def reply(self, text, *, thread_ts=None):
+        from uuid import uuid4
+        return self.dispatcher.dispatch(self.channel, text, thread_ts=thread_ts, ping=False,
+                                       idempotency_key="reply:" + uuid4().hex)
+
+    def settings_card(self, proposal):
+        card_id = "SETTINGS-" + proposal["id"]
+        rendered = render_card({"id": card_id, "revision": 1, "goal": proposal["confirmation"]},
+                               action_values={name: {"proposal_id": proposal["id"]} for name in ("approve", "reject")})
+        for button, label in zip(rendered["buttons"], ("Confirm", "Cancel")):
+            button["text"]["text"] = label
+        effect = self.dispatcher.dispatch(self.channel, rendered["text"], buttons=rendered["buttons"],
+                                         card_id=card_id, revision=1, ping=False,
+                                         idempotency_key="setting-proposal:" + proposal["id"])
+        self.bind_effect(effect)
+        return effect
+
+    def answer_onboarding(self, text):
+        pending = self.onboarding.pending
+        if pending and text.strip().lower() in {"no", "cancel"}:
+            proposal = pending[0]
+            if "id" in proposal:
+                self.runtime.settings.cancel_change(proposal)
+        reply = self.onboarding.answer(self.runtime.config["owner_slack_id"], text)
+        self.runtime.engine._set_control("dots_onboarding", {
+            "index": self.onboarding.index, "pending": self.onboarding.pending})
+        return reply
+
+    def onboarding_binding(self):
+        if not self.onboarding.pending:
+            return None
+        proposal = self.onboarding.pending[0]
+        return (proposal["task_id"], proposal["revision"]) if "task_id" in proposal else ("SETTINGS-" + proposal["id"], 1)
 
     def propose(self, excerpts):
         schema = {"type": "object", "properties": {"proposal": {"type": "string"}}, "required": ["proposal"]}
@@ -136,6 +203,7 @@ class SlackRuntime:
     def card(self, card):
         rendered = render_card(asdict(card))
         effect = self.dispatcher.dispatch(self.channel, rendered["text"], buttons=rendered["buttons"],
-                                          task_id=card.id, idempotency_key=f"task-card:{card.id}:{card.revision}", ping=False)
-        if effect.receipt: self.runtime.bridge.bind_card(effect.channel, effect.receipt, card.id, card.revision)
+                                          task_id=card.id, card_id=card.id, revision=card.revision,
+                                          idempotency_key=f"task-card:{card.id}:{card.revision}", ping=False)
+        self.bind_effect(effect)
         return effect

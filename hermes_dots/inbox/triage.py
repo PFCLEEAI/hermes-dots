@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from email.utils import parseaddr
 import json
+import re
 
 from hermes_dots.security import redact
 
@@ -116,6 +117,11 @@ class MailTriage:
         if address(mail.get("sender", "")) in {address(vip) for vip in vips}:
             result = Triage("urgent", "Sender is a VIP; " + result.reason, result.needs_reply,
                             result.deadline, result.handled, result.injection_ignored, result.ideas)
+        content = str(mail.get("subject", "")) + "\n" + str(mail.get("body", ""))
+        if re.search(r"ignore (?:all |previous |prior )*instructions|reveal (?:your |the )?(?:credentials|secrets)|"
+                     r"이전\s*지시를?\s*무시|규칙을?\s*바꾸|비밀을?\s*공개", content, re.I):
+            result = Triage(result.category, result.reason + "; embedded instructions ignored", result.needs_reply,
+                            result.deadline, result.handled, True, result.ideas)
         return result
 
     def draft(self, mail, *, voice=None, notes=()):

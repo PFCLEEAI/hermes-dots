@@ -230,13 +230,14 @@ class EmailResponsibility:
         rendered = self.render(card)
         effects = [OutboxEffect(delivery_id, delivery_id, self.owner_channel, {
             **rendered, "mail_operation": "card", "root_delivery_id": root,
+            "card_id": card.id, "revision": revision,
             "ping": ping or awaiting_root,
         })]
         if ping and root:
             ping_id = delivery_id + "-ping"
             effects.append(OutboxEffect(ping_id, ping_id, self.owner_channel, {
                 "text": "Urgent mail changed: #" + card.id, "mail_operation": "ping",
-                "root_delivery_id": root, "ping": True,
+                "root_delivery_id": root, "ping": True, "card_id": card.id, "revision": revision,
             }))
         return card, effects
 

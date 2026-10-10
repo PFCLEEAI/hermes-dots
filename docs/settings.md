@@ -32,6 +32,8 @@ settings
 
 Questions get a nudge after one hour, then in digests. Quiet hours still apply. Settings cannot lower the authority floor: send, delete, spend, and account changes can never be `auto`, and denied paths cannot be unlocked.
 
+Known outside-action tools are blocked by default. The running product cannot yet approve outside actions; that flow is planned for a later version. The sandbox has network access for research, so tool-name checks are not a network isolation boundary. Email can never be sent in v1; its adapter is read-only.
+
 ## Commands
 
 | Command | What it does |

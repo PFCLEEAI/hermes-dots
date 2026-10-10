@@ -22,12 +22,16 @@ class ScriptedModel:
     """Select fake responses by message identity, not by product-side fixtures."""
     def __init__(self, expected):
         responses = {
-            key: {"category": value["category"], "needs_reply": value["needs_reply"],
+            key: {"category": "regular" if key.startswith(("vip-", "deadline-")) else value["category"], "needs_reply": value["needs_reply"],
                   "reason": "Invented practice result",
                   "handled": value.get("card_state") == "closed",
-                  "injection_ignored": value.get("injection_ignored", False)}
+                  "injection_ignored": False}
             for key, value in expected.items()
         }
+        # The fake extracts deadlines but never decides urgency; product rules do.
+        for key, hour in {"deadline-en": 16, "deadline-ko": 17,
+                          "deadline-update-en": 15, "deadline-update-ko": 16}.items():
+            responses[key]["deadline"] = f"2026-10-12T{hour:02}:00:00+00:00"
         responses.update({None: {"ok": True},
                           "draft-ko": {"draft": "안녕하세요. 요청을 확인하고 답변드리겠습니다."},
                           "draft-en": {"draft": "Hi Alex, thanks. I will review the request."}})
@@ -111,7 +115,6 @@ class Scenario:
         for key in ("regular_mail", "uncertain_mail", "noise", "ideas", "replied_still_open"):
             self.runtime.digest.providers[key].clear()
         self.mail.register_digest(self.runtime.digest)
-        self.runtime.bridge.handler = self.runtime.route
         self.brain.evidence.append({"kind": "acceptance_start"}, now=self.clock.now())
         self.initial_logs = self.logs()
         self.owner_edits = {}

@@ -8,7 +8,7 @@ These are v1 safety requirements. Local and mock verification do not establish l
 
 Orca runs in its own dots home with its own Hermes environment, profile, and kanban home. The installer does not read or write stock `~/.hermes` and will not overwrite a profile. The path guard resolves symlinks and always denies `~/.hermes`; extra denied paths are add-only and cannot be unlocked by chat.
 
-Agent shell and code use non-persistent Docker containers. Orca's workspace is writable; Hermes skills and cache, when mounted, are read-only inside the dots home. Credential files and host paths outside the dots home are not mounted. Without Docker, code work pauses and health reports failure. Orca watches its sandbox work and files you provide through Slack.
+Agent shell and code use non-persistent Docker containers. Orca's workspace is writable; Hermes skills and cache, when mounted, are read-only inside the dots home. Credential files and host paths outside the dots home are not mounted. The sandbox has network access for research; it is not a network isolation boundary. Without Docker, code work pauses and health reports failure. Orca watches its sandbox work and files you provide through Slack.
 
 ## Owner and approvals
 
@@ -16,13 +16,13 @@ Only the configured owner Slack user can command Orca. A task card records the g
 
 Action rules are `auto`, `when_told`, `ask_first`, and `hand_to_owner`. Reading, research, writing in Orca's space, sandbox code, and temporary helpers default to `auto`. Sending or posting to anyone except the owner, deleting outside scratch, spending, and account changes default to `ask_first` and can never become `auto`.
 
-Approval is single-use and binds the exact action, target, content, and card revision. Changing any part requires new approval. Emails, web pages, and files cannot grant permission, change settings, or override rules. Temporary helpers cannot write the brain or message the owner.
+The approval primitive is single-use and binds the exact action, target, content, and card revision. Changing any part requires new approval. **The running v1 product has no outside-action approval flow yet.** Known outside-action tools are blocked by default and cannot yet be approved; a later version will provide that flow. Detection uses known tool names and action verbs, so it does not cover arbitrary network calls from sandbox code. Emails, web pages, and files cannot grant permission, change settings, or override rules. Temporary helpers cannot write the brain or message the owner.
 
 **v1 cannot send email.** Gmail uses only `gmail.readonly`; there are no mailbox mutations or Gmail draft creation. Drafts are text on Slack cards for you to copy.
 
 ## Secrets and provider data
 
-Credentials live in a local secrets file with mode `0600` or the macOS keychain. They do not belong in source control, notes, logs, prompts, or tool results. Redaction applies before evidence logging and model calls. Only needed excerpts go to your configured provider; whole raw logs are not sent. Slack receives cards, drafts, and digests.
+Credentials live in a local secrets file with mode `0600` or the macOS keychain. The installer creates an empty `secrets.env` template in the dots home; credentials must be configured separately. They do not belong in source control, notes, logs, prompts, or tool results. Redaction applies before evidence logging and model calls. Only needed excerpts go to your configured provider; whole raw logs are not sent. Slack receives cards, drafts, and digests.
 
 Local storage does not mean no data leaves the machine: Slack and the chosen model provider process the content sent to them, and later Gmail connection reads mailbox content. Choose connections with that boundary in mind.
 

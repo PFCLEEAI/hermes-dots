@@ -10,7 +10,7 @@ from threading import RLock
 from hermes_dots.security.paths import PathDeniedError, PathGuard
 from hermes_dots.security.secrets import redact
 from hermes_dots.engine.support import clean, queue_ping
-from hermes_dots.slack.bridge import parse_command
+from hermes_dots.slack.bridge import CARD_REF, parse_command
 
 HOOKS = ["pre_tool_call", "subagent_start", "subagent_stop", "transform_tool_result",
          "post_tool_call", "post_llm_call", "pre_gateway_dispatch", "on_session_end"]
@@ -35,6 +35,8 @@ class RuntimeHooks:
         self.runtime.brain.evidence.append({"kind": kind, **clean(payload)})
 
     def _path(self, text):
+        if not isinstance(text, str):
+            raise TypeError("Path must be a string")
         # Docker paths map only the explicit workspace; never map container /root/.hermes
         # to the host default home.
         if text == "/workspace" or text.startswith("/workspace/"):
@@ -56,10 +58,9 @@ class RuntimeHooks:
                 paths = [args.get("path", ".")]
                 paths += re.findall(r"^\*\*\* (?:Update|Add|Delete) File: (.+)$", args.get("patch", ""), re.M)
                 for path in paths:
-                    if path is not None:
-                        resolved = self._path(path)
-                        if not resolved.is_relative_to(self.runtime.root / "workspace"):
-                            raise PermissionError("File tools are limited to the sandbox workspace")
+                    resolved = self._path(path)
+                    if not resolved.is_relative_to(self.runtime.root / "workspace"):
+                        raise PermissionError("File tools are limited to the sandbox workspace")
             if tool_name in {"terminal", "execute_code"}:
                 command = args.get("command", args.get("code", ""))
                 if "~/.hermes" in command or "${HOME}/.hermes" in command or "$HOME/.hermes" in command:
@@ -85,8 +86,12 @@ class RuntimeHooks:
                 payload = json.dumps(args, sort_keys=True, ensure_ascii=False)
                 self.runtime.consume_approval(binding, tool_name, action, target, payload)
             return None
-        except (PermissionError, ValueError, OSError) as error:
-            self.event("tool_blocked", {"tool_name": tool_name, "args": args, "reason": str(error)})
+        except Exception as error:
+            # Hermes logs most hook exceptions and continues; always return a block.
+            try:
+                self.event("tool_blocked", {"tool_name": tool_name, "args": args, "reason": str(error)})
+            except Exception:
+                pass
             return {"action": "block", "message": redact(str(error))}
 
     @staticmethod
@@ -126,6 +131,19 @@ class RuntimeHooks:
     def on_session_end(self, **kwargs): self.event("on_session_end", kwargs)
 
     def pre_gateway_dispatch(self, event, gateway=None, session_store=None, **kwargs):
+        try:
+            return self._gateway_dispatch(event, gateway, session_store)
+        except Exception as error:
+            try:
+                self.event("gateway_dispatch_blocked", {"error": type(error).__name__})
+                transport = getattr(self.runtime, "transport", None)
+                if transport:
+                    transport.reply("I couldn't apply that reply. Please use the current card or request a fresh proposal.")
+            except Exception:
+                pass
+            return {"action": "skip", "reason": "Owner dispatch failed closed"}
+
+    def _gateway_dispatch(self, event, gateway, session_store):
         data = asdict(event) if is_dataclass(event) else dict(event) if isinstance(event, dict) else {
             "text": getattr(event, "text", ""), "source": str(getattr(event, "source", ""))}
         self.event("pre_gateway_dispatch", {"text": data.get("text", ""), "user": data.get("user")})
@@ -135,21 +153,47 @@ class RuntimeHooks:
         if user != self.runtime.config.get("owner_slack_id"):
             return {"action": "skip", "reason": "Only the configured owner can command Orca"}
         if source is not None:
-            from gateway.session import build_session_key
-            self.runtime.config["owner_session_key"] = build_session_key(source, profile="orca")
+            if gateway is not None:
+                key = gateway._session_key_for_source(source)
+            elif session_store is not None:
+                key = session_store._generate_session_key(source)
+            else:
+                from gateway.session import build_session_key
+                key = build_session_key(source, profile=getattr(source, "profile", None))
+            self.runtime.config["owner_session_key"] = key
         text = data.get("text", "")
+        channel = getattr(source, "chat_id", None) or data.get("channel", "owner")
+        thread_ts = getattr(source, "thread_id", None) or data.get("thread_ts")
+        raw = getattr(event, "raw_message", None) or data.get("raw_message") or {}
+        # Slack also supplies a synthetic root thread for a fresh DM. Only a
+        # persisted card or an actual thread reply carries a reply binding.
+        if source is not None and (channel, thread_ts) not in self.runtime.bridge.threads and not raw.get("thread_ts"):
+            thread_ts = None
+        transport = getattr(self.runtime, "transport", None)
+        if transport:
+            self.runtime.owner_channel(channel)
+        def reply(result):
+            message = result.get("reply") if isinstance(result, dict) else None
+            message = message or json.dumps(clean(result), default=str)
+            if transport:
+                transport.reply(message, thread_ts=thread_ts)
+            else:
+                queue_ping(self.runtime.ledger, self.runtime.settings, None,
+                           {"kind": "command_reply", "text": message})
         try:
             command = parse_command(text)
         except ValueError:
             command = None
-        if command:
-            channel = getattr(source, "chat_id", None) or data.get("channel", "owner")
+        bound = thread_ts or CARD_REF.search(text)
+        if command or bound or self.runtime.engine.pending_questions():
             route = self.runtime.bridge.receive({"user": user, "text": text, "channel": channel,
-                                                 "thread_ts": getattr(source, "thread_id", None)})
+                                                 "thread_ts": thread_ts})
             result = self.runtime.route(route) if route.kind != "question" else route.text
-            queue_ping(self.runtime.ledger, self.runtime.settings, None,
-                       {"kind": "command_reply", "text": json.dumps(clean(result), default=str)})
-            return {"action": "skip", "reason": "Owner command handled without a model call"}
+            reply(result)
+            return {"action": "skip", "reason": "Owner reply handled with its card context"}
+        if transport and not transport.onboarding.complete and getattr(source, "chat_type", data.get("chat_type", "dm")) == "dm":
+            reply(transport.answer_onboarding(text))
+            return {"action": "skip", "reason": "Owner onboarding handled without a model call"}
         safe_text = redact(text)
         if safe_text != text: return {"action": "rewrite", "text": safe_text}
         return None

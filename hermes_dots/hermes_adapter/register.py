@@ -69,8 +69,16 @@ def register(ctx):
             await ack()
             def dispatch():
                 route = runtime.bridge.receive({**body, "action": {**action, "action_id": _id}})
-                if route.kind not in {"ignored", "question"}: return runtime.route(route)
-                return route
+                if route.kind == "ignored": return route
+                try:
+                    result = runtime.route(route) if route.kind != "question" else {"reply": route.text}
+                except (ValueError, PermissionError) as error:
+                    runtime.hooks.event("slack_action_rejected", {"error": type(error).__name__})
+                    result = {"reply": "Please use the current card or request a fresh proposal."}
+                transport = getattr(runtime, "transport", None)
+                if transport and isinstance(result, dict) and result.get("reply"):
+                    transport.reply(result["reply"], thread_ts=(body.get("message") or {}).get("ts") or body.get("message_ts"))
+                return result
             return await asyncio.to_thread(dispatch)
         ctx.register_slack_action_handler(action_id, action_handler)
 

@@ -148,6 +148,17 @@ class SettingsService:
             self.feedback(feedback)
         return {"name": name, "value": value, "reply": f"Stored {name}: {json.dumps(value, ensure_ascii=False)}"}
 
+    def cancel_change(self, proposal_id):
+        if isinstance(proposal_id, dict):
+            proposal_id = proposal_id["id"]
+        with self.ledger.transaction():
+            changed = self.ledger.connection.execute(
+                "UPDATE setting_proposals SET confirmed=-1 WHERE id=? AND confirmed=0", (proposal_id,))
+            if changed.rowcount != 1:
+                raise ValueError("Unknown or already decided setting proposal")
+            self.ledger.record_event("feedback", {"kind": "setting_cancelled", "proposal_id": proposal_id})
+        return {"reply": "Setting change cancelled."}
+
     def local_now(self, moment):
         zone = self.get("timezone")
         return moment.astimezone(ZoneInfo(zone)) if zone else moment.astimezone()

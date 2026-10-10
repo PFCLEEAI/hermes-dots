@@ -44,7 +44,7 @@
         <article class="feature"><span class="number" aria-hidden="true">02</span><h3>Follows up thoughtfully</h3><p>Check-backs come with a time and a reason. Questions come with a recommendation. Other allowed work continues, and nudges respect quiet hours.</p></article>
         <article class="feature"><span class="number" aria-hidden="true">03</span><h3>Watches the inbox</h3><p>Urgent pings, regular-mail digests, and reply drafts for you to copy. v1 uses practice mail and a mock-tested Gmail read-only adapter. No email sending.</p></article>
         <article class="feature"><span class="number" aria-hidden="true">04</span><h3>Changes settings by chat</h3><p>“Make quiet hours 22 to 7.” “Digest only at 9.” Orca confirms the new value, then saves it and shows what was stored.</p></article>
-        <article class="feature"><span class="number" aria-hidden="true">05</span><h3>Stays within your rules</h3><p>One owner, an isolated home, Docker for code, and approvals for specific outside actions. Pause or stop from Slack whenever you need to.</p></article>
+        <article class="feature"><span class="number" aria-hidden="true">05</span><h3>Stays within your rules</h3><p>One owner, an isolated home, Docker for code, and known outside-action tools blocked by default. Outside actions cannot yet be approved. Pause or stop from Slack whenever you need to.</p></article>
       </div>
     </section>
 
@@ -52,19 +52,19 @@
       <div class="section-heading"><p class="eyebrow">How it works</p><h2 id="how-title">From a message to a next step.</h2></div>
       <ol class="steps">
         <li><h3>Give it a responsibility</h3><p>Tell Orca what you need in Slack. Review a card with the goal, allowed sources, actions, and evidence needed to finish.</p></li>
-        <li><h3>Confirm the plan</h3><p>Orca works within that card, searches memory, and schedules check-backs. Anything needing your approval waits for your yes.</p></li>
+        <li><h3>Confirm the plan</h3><p>Orca works within that card, searches memory, and schedules check-backs. Known outside-action tools stay blocked; their approval flow comes in a later version.</p></li>
         <li><h3>Keep the thread moving</h3><p>Get updates and digests with sources, open questions, and the next check time. Completed work comes with evidence.</p></li>
       </ol>
     </section>
 
     <section id="quickstart" class="section shell" aria-labelledby="quickstart-title">
       <div class="quickstart-panel">
-        <div><p class="eyebrow">Quickstart</p><h2 id="quickstart-title">A home of its own.</h2><p>macOS first. Python 3.11+, Git, Docker Desktop, your Slack workspace, and your chosen Hermes model provider.</p><a class="text-link" href="https://github.com/PFCLEEAI/hermes-dots/blob/main/docs/install.md">Read the installation guide <span aria-hidden="true">↗</span></a></div>
+        <div><p class="eyebrow">Quickstart</p><h2 id="quickstart-title">A home of its own.</h2><p>macOS first. Python 3.11–3.13, Git, Docker Desktop, your Slack workspace, and your chosen Hermes model provider.</p><a class="text-link" href="https://github.com/PFCLEEAI/hermes-dots/blob/main/docs/install.md">Read the installation guide <span aria-hidden="true">↗</span></a></div>
         <div class="setup">
           <pre><code>git clone https://github.com/PFCLEEAI/hermes-dots.git
 cd hermes-dots
-python3 scripts/install.py --home ~/.hermes-dots</code></pre>
-          <ol><li>Install pinned Hermes in the separate dots home.</li><li>Connect one Slack app and configure yourself as the sole owner.</li><li>Finish onboarding in chat; confirm “Watch the practice inbox.”</li></ol>
+python3 scripts/install.py --home ~/.hermes-dots --owner-slack-id "&lt;your Slack member ID&gt;"</code></pre>
+          <ol><li>Replace the Slack member ID placeholder with your own ID. Install pinned Hermes and the current dots working tree in the separate home; use an exact <code>--pack-ref</code> commit for an immutable pack.</li><li>Connect one Slack app. Your owner ID is stored by the installer; match the Hermes allowlist to it.</li><li>Finish onboarding in chat; confirm “Watch the practice inbox.” The installer copies invented practice mail and creates an empty protected <code>secrets.env</code> template; configure and load credentials separately.</li></ol>
           <p class="small">v1 setup contract; implementation is in progress. Gmail connection comes later, with <code>gmail.readonly</code> only. The login item is generated for you to enable.</p>
         </div>
       </div>
@@ -73,7 +73,7 @@ python3 scripts/install.py --home ~/.hermes-dots</code></pre>
     <section id="safety" class="section shell" aria-labelledby="safety-title">
       <div class="section-heading"><p class="eyebrow">Safety</p><h2 id="safety-title">You keep the say.</h2></div>
       <div class="safety-grid">
-        <div><h3>Boundaries before actions</h3><p>The stock <code>~/.hermes</code> home stays denied. Code runs in non-persistent Docker containers without credential mounts. Sending, deletion outside scratch, spending, and account changes ask first; approvals are specific and single-use.</p></div>
+        <div><h3>Boundaries before actions</h3><p>The stock <code>~/.hermes</code> home stays denied. Code runs in non-persistent Docker containers without credential mounts. Known tools for outside sending, deletion outside scratch, spending, and account changes are blocked by default and cannot yet be approved. The sandbox has network access for research; tool-name checks do not cover arbitrary network calls. Email can never be sent in v1; the mail adapter is read-only.</p></div>
         <div><h3>Memory you can inspect</h3><p>Notes are Markdown. Logs are redacted and append-only. Forget removes notes and search entries and suppresses re-learning, while retained logs remain. Skill and prompt changes stay proposals until you approve.</p></div>
       </div>
       <p class="safety-note">Only needed excerpts go to your configured model provider. Slack receives cards and digests. Local and mock tests do not establish live account operation. <a href="https://github.com/PFCLEEAI/hermes-dots/blob/main/docs/security.md">Read the safety model</a>.</p>

@@ -1,10 +1,13 @@
 import ast
+import html
 import io
 import json
 import logging
 import os
 from pathlib import Path
 import plistlib
+import shlex
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -14,6 +17,7 @@ import pytest
 
 from hermes_dots.install import HERMES_SHA, InstallError, install
 from hermes_dots.install.installer import _extract
+from hermes_dots.install import installer
 
 
 @pytest.fixture(autouse=True)
@@ -33,6 +37,8 @@ def source(tmp_path):
         (root / name).write_text("# invented fixture\n")
     (root / "plugins/memory/hermes_dots_brain/plugin.yaml").write_text("name: hermes_dots_brain\n")
     (root / "plugins/memory/hermes_dots_brain/__init__.py").write_text("# provider fixture\n")
+    (root / "tests/fixtures").mkdir(parents=True)
+    (root / "tests/fixtures/mail.json").write_bytes((repo / "tests/fixtures/mail.json").read_bytes())
     return root
 
 
@@ -82,6 +88,10 @@ def test_temp_install_pinned_and_confined(tmp_path, source):
     assert (home / "brain/shared/Decisions").is_dir()
     assert (home / "evidence").is_dir()
     assert (result.profile / "plugins/hermes_dots_brain/__init__.py").is_file()
+    assert (home / "practice-mail.json").read_bytes() == (source / "tests/fixtures/mail.json").read_bytes()
+    assert json.loads((home / "practice-mail.json").read_text())
+    assert (home / "secrets.env").read_bytes() == b""
+    assert (home / "secrets.env").stat().st_mode & 0o777 == 0o600
     assert (result.profile / "plugins/hermes-dots/__init__.py").read_text().strip() == (
         "from hermes_dots.hermes_adapter.register import register")
     for _, kwargs in fake.calls:
@@ -143,6 +153,58 @@ def test_local_archive_and_exact_pack_ref(tmp_path, source):
     pack = json.loads((result.home / "hermes-pack.yaml").read_text())
     assert all(entry["ref"] == "a" * 40 for entry in pack["plugins"])
     assert all(Path(entry["repo"]).is_relative_to(result.home) for entry in pack["plugins"])
+
+
+def test_exact_ref_install_uses_archived_practice_fixture(tmp_path, source):
+    archived = tmp_path / "archived-source"
+    shutil.copytree(source, archived)
+    mail = [{"account": "practice", "message_id": "archived", "sender": "alex@example.com"}]
+    (archived / "tests/fixtures/mail.json").write_text(json.dumps(mail))
+    result = install(tmp_path / "isolated", source_root=source, pack_ref="a" * 40,
+                     run=FakeRun(archived), owner_slack_id="invented-owner")
+    assert json.loads((result.home / "practice-mail.json").read_text()) == mail
+    assert (source / "tests/fixtures/mail.json").read_bytes() != (result.home / "practice-mail.json").read_bytes()
+
+
+@pytest.mark.parametrize("relative", ["secrets.env", "practice-mail.json"])
+def test_existing_local_seed_refused_before_mutation(tmp_path, source, relative):
+    home = tmp_path / "isolated"
+    home.mkdir()
+    sentinel = home / relative
+    sentinel.write_text("preserve this")
+    fake = FakeRun()
+    with pytest.raises(InstallError, match="overwrite"):
+        install(home, source_root=source, run=fake, owner_slack_id="invented-owner")
+    assert sentinel.read_text() == "preserve this"
+    assert not fake.calls
+
+
+@pytest.mark.parametrize("document", ["README.md", "docs/install.md", "site/index.html"])
+def test_documented_quickstart_accepts_installer_cli(tmp_path, monkeypatch, document):
+    repo = Path(__file__).resolve().parents[3]
+    text = html.unescape((repo / document).read_text())
+    # Extract just the command from the HTML code block, preserving its quoted placeholder.
+    line = text.split("python3 scripts/install.py ", 1)[1].split("\n", 1)[0].split("</code>", 1)[0]
+    args = shlex.split(line.replace("<your Slack member ID>", "invented-owner"))
+    calls = []
+    def fake_install(home, **kwargs):
+        calls.append((home, kwargs))
+        return SimpleNamespace(profile=tmp_path / "profile", launcher=tmp_path / "bin/hermes-dots", plist=tmp_path / "item.plist")
+    monkeypatch.setattr(installer, "install", fake_install)
+    assert installer.main(args) == 0
+    assert calls[0][0] == "~/.hermes-dots"
+    assert calls[0][1]["owner_slack_id"] == "invented-owner"
+    assert "Python 3.11–3.13" in text
+
+
+def test_installer_help_matches_documented_options(capsys):
+    with pytest.raises(SystemExit) as result:
+        installer.main(["--help"])
+    assert result.value.code == 0
+    help_text = capsys.readouterr().out
+    for option in ("--home", "--owner-slack-id", "--pack-ref", "--hermes-source", "--python"):
+        assert option in help_text
+    assert "Python 3.11–3.13" in help_text
 
 
 @pytest.mark.parametrize("child", ["", "profiles/orca"])

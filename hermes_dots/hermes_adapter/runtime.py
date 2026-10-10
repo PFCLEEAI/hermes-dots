@@ -52,6 +52,9 @@ class DotsRuntime:
         self.helpers = HermesHelpers(ctx.subagent_lifecycle) if ctx is not None else None
         self.delivery = None
         channel = self.config.get("owner_channel", self.config.get("owner_slack_id", "owner"))
+        row = self.ledger.connection.execute("SELECT value FROM engine_control WHERE name='dots_owner_channel'").fetchone()
+        if row:
+            channel = json.loads(row[0])
         self.health = HealthMonitor(self.ledger, self.settings, probes or self._probes(),
                                     evidence=self.brain.evidence, owner_channel=channel)
         self.engine = CoworkerEngine(self.ledger, self.settings, self.brain, model=self.model, health=self.health,
@@ -72,6 +75,15 @@ class DotsRuntime:
         self.digest.register("missed_runs", self.engine.missed_runs)
         self.digest.register("health", self.health.status)
         self.digest.register("usage", self.engine.usage.summary)
+
+    def owner_channel(self, channel):
+        # Slack receives a U… member ID at install, but real DM events use D…
+        # channel IDs. Keep deliveries and restored card bindings in that lane.
+        self.engine._set_control("dots_owner_channel", channel)
+        self.engine.owner_channel = self.health.owner_channel = self.mail.owner_channel = channel
+        transport = getattr(self, "transport", None)
+        if transport:
+            transport.channel = channel
 
     def _setting_feedback(self, value):
         self.brain.record_feedback("setting_change", json.dumps(value))
@@ -144,7 +156,13 @@ class DotsRuntime:
         return result
 
     def settings_tool(self, args):
-        if args.get("text"): return self.settings.parse_change(args["text"])
+        if args.get("text"):
+            transport = getattr(self, "transport", None)
+            if transport is None:
+                raise RuntimeError("Slack must be connected to confirm a setting change")
+            proposal = self.settings.parse_change(args["text"])
+            transport.settings_card(proposal)
+            return proposal
         return self.settings.list_settings()
 
     def route(self, route):
@@ -157,13 +175,51 @@ class DotsRuntime:
             if name == "stop": return self.engine.stop(argument.lstrip("#"))
             return getattr(self.engine, name)()
         if route.kind == "instruction":
-            return self.engine.instruction(route.text, task_id=route.binding.task_id, revision=route.binding.revision)
+            task_id, revision = route.binding.task_id, route.binding.revision
+            transport = getattr(self, "transport", None)
+            answer = route.text.strip().lower()
+            if transport and transport.onboarding_binding() == (task_id, revision):
+                return {"reply": transport.answer_onboarding(answer)}
+            if task_id.startswith("SETTINGS-"):
+                if answer not in {"yes", "confirm", "no", "cancel"}:
+                    return {"reply": "Reply yes to confirm, or no to cancel this setting change."}
+                return self.setting_decision(task_id.removeprefix("SETTINGS-"), answer in {"yes", "confirm"})
+            if task_id.startswith("MAIL-"):
+                return {"reply": "Use this mail card's buttons to change its state."}
+            task = self.ledger.get_task(task_id)
+            if task.card_revision != revision:
+                raise ValueError("Reply in the current card's thread")
+            questions = self.engine.pending_questions(task_id)
+            if len(questions) == 1:
+                return self.engine.answer_question(questions[0]["id"], route.text)
+            if questions:
+                return {"reply": "Which pending question on this card are you answering?"}
+            result = self.engine.instruction(route.text, task_id=task_id, revision=revision)
+            if transport:
+                transport.card(result)
+            return result
         if route.kind == "action":
             value = route.value or {}
+            task_id, revision = route.binding.task_id, route.binding.revision
+            transport = getattr(self, "transport", None)
+            if transport and transport.onboarding_binding() == (task_id, revision) and route.action in {"approve", "reject"}:
+                return {"reply": transport.answer_onboarding("yes" if route.action == "approve" else "no")}
+            if task_id.startswith("SETTINGS-"):
+                proposal_id = task_id.removeprefix("SETTINGS-")
+                if not isinstance(value, dict) or value.get("proposal_id") != proposal_id or route.action not in {"approve", "reject"}:
+                    raise PermissionError("Use the bound setting proposal")
+                return self.setting_decision(proposal_id, route.action == "approve")
+            if task_id.startswith(("MAIL-", "IDEA-")):
+                result = self.mail.handle_action("dots_" + route.action, {
+                    "task_id": task_id, "revision": revision, "value": value})
+                if route.action in {"make_vip", "remove_vip"} and transport:
+                    transport.settings_card(result)
+                if transport:
+                    transport.drain()
+                return result
             task = self.ledger.get_task(route.binding.task_id)
             if task.card_revision != route.binding.revision: raise PermissionError("Stale card action")
             if route.action == "approve":
-                if value.get("proposal_id"): return self.settings.confirm_change(value["proposal_id"])
                 if value.get("action"):
                     return self.engine.approvals(task.id).grant(value["action"], value["target"], value["content"], task.card_revision)
                 return self.engine.confirm(task.id, task.card_revision)
@@ -171,6 +227,19 @@ class DotsRuntime:
             if route.action == "undo_learned": return self.brain.undo(value["note_id"])
             if route.action == "pick_version": return self.brain.promote(value["note_id"], owner_approved=True)
             return self.mail.handle_action("dots_" + route.action, value)
+
+    def setting_decision(self, proposal_id, confirm):
+        if not confirm:
+            return self.settings.cancel_change(proposal_id)
+        row = self.ledger.connection.execute("SELECT name FROM setting_proposals WHERE id=?", (proposal_id,)).fetchone()
+        if row and row["name"] == "vips":
+            result = self.mail.confirm_vip(proposal_id)
+        else:
+            result = self.settings.confirm_change(proposal_id)
+        transport = getattr(self, "transport", None)
+        if transport:
+            transport.drain()
+        return result
 
     def _claim_slot(self, kind, slot):
         key = "dots_slot:" + kind

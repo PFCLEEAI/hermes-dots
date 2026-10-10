@@ -130,10 +130,10 @@ def install(
     destinations = ["profiles/orca", "runtime/hermes", "runtime/hermes-dots", "venv",
                     "local-config.json", "install-receipt.json", "bin/hermes-dots",
                     "login-items/org.hermes-dots.orca.plist", "hermes-pack.yaml", "workspace", "kanban",
-                    "tmp", "cache/pip", "brain", "state", "evidence"]
+                    "tmp", "cache/pip", "brain", "state", "evidence", "practice-mail.json", "secrets.env"]
     for relative in destinations:
         target = _destination(home, relative)
-        if target.exists() and relative in destinations[:9]:
+        if target.exists() and (relative in destinations[:9] or relative in {"practice-mail.json", "secrets.env"}):
             raise InstallError(f"Refusing to overwrite existing install path: {relative}")
         for value in denied:
             if _inside(target.resolve(), Path(value).resolve()):
@@ -191,6 +191,14 @@ def install(
             if item.is_symlink():
                 raise InstallError(f"Source file is a symlink: {name}")
             shutil.copyfile(item, dots / name)
+
+    # Immutable installs must use the fixture from the archived pack, not the checkout.
+    fixture_root = dots if pack_ref else source
+    fixture = fixture_root / "tests/fixtures/mail.json"
+    if fixture.is_symlink() or not _inside(fixture.resolve(), fixture_root):
+        raise InstallError("Practice fixture escapes the pack source")
+    shutil.copyfile(fixture, home / "practice-mail.json")
+    os.close(os.open(home / "secrets.env", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
 
     run([python, "-m", "venv", str(venv)], check=True, env=env)
     # Editable installs stay entirely in the copied, isolated runtime roots.

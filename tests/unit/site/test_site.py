@@ -44,3 +44,13 @@ def test_hero_webp_size():
     assert 0 < hero.stat().st_size < 500_000
     data = hero.read_bytes()
     assert data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+
+
+def test_security_docs_describe_running_product_boundaries():
+    for relative in ("README.md", "docs/security.md", "docs/settings.md", "site/index.html"):
+        text = (ROOT / relative).read_text()
+        assert "blocked by default" in text, relative
+        assert "cannot yet be approved" in text or "cannot yet approve" in text, relative
+        assert "network access for research" in text, relative
+        assert "arbitrary network calls" in text or "not a network isolation boundary" in text, relative
+        assert "never be sent" in text or "cannot send email" in text, relative

@@ -6,17 +6,21 @@ This guide describes the v1 setup contract while implementation is in progress. 
 
 ## Before you start
 
-macOS is the first target. Use Python 3.11 or newer, Git, and Docker Desktop. You need a Slack workspace where you can install an app and a model provider configured in Hermes. Docker must be running for code work; if it goes down, code tasks pause and a health alert is held until quiet hours end.
+macOS is the first target. Use Python 3.11–3.13, Git, and Docker Desktop. You need a Slack workspace where you can install an app and a model provider configured in Hermes. Docker must be running for code work; if it goes down, code tasks pause and a health alert is held until quiet hours end.
 
 ## Install into a separate home
 
 ```bash
 git clone https://github.com/PFCLEEAI/hermes-dots.git
 cd hermes-dots
-python3 scripts/install.py --home ~/.hermes-dots
+python3 scripts/install.py --home ~/.hermes-dots --owner-slack-id "<your Slack member ID>"
 ```
 
-The installer pins stock Hermes to `v2026.9.24` (`f97608f178d1ffeca59860195ab7da295f7c8e5f`), creates an isolated environment and Orca profile, and installs the pack with exact refs. Its own `HERMES_HOME` and `HERMES_KANBAN_HOME` live under the dots home. It refuses stock `~/.hermes` and refuses to overwrite an existing profile.
+Replace the Slack member ID placeholder with your own ID (Slack profile → More → Copy member ID). `--owner-slack-id` is required and is stored in `local-config.json` as the sole owner.
+
+The installer pins stock Hermes to `v2026.9.24` (`f97608f178d1ffeca59860195ab7da295f7c8e5f`) and creates an isolated environment and Orca profile. By default it copies the current dots working tree; this is a development install, not an exact-ref pack install. To install an immutable local pack, add `--pack-ref <40-character commit SHA>` from your dots clone; the installer archives that commit and records it in the receipt. `--hermes-source <local clone>` optionally archives the exact Hermes pin without fetching it.
+
+`HERMES_HOME` is `~/.hermes-dots/profiles/orca` and `HERMES_KANBAN_HOME` is `~/.hermes-dots/kanban` for the default home. The installer copies the invented fixture into `practice-mail.json` (from the archived pack for an exact-ref install), creates an empty `0600` `secrets.env` template, and generates the launcher `~/.hermes-dots/bin/hermes-dots`. It refuses stock `~/.hermes`, existing profiles, and existing secret or practice-mail files. Run `python3 scripts/install.py --help` for options; `--python` must select Python 3.11–3.13.
 
 Follow installer output to use the installed environment. Do not use an unrelated global Hermes executable: it may select another installation. Keep configuration, model login, and gateway setup pointed at the dots environment. If install refuses an existing profile, inspect the reported target and select a new empty home rather than deleting it blindly.
 
@@ -24,9 +28,18 @@ Follow installer output to use the installed environment. Do not use an unrelate
 
 1. Create one app in your own workspace. Use the [Slack guide at the pinned Hermes release](https://github.com/NousResearch/hermes-agent/blob/v2026.9.24/website/docs/user-guide/messaging/slack.md) for app and Socket Mode setup. That upstream guide shows stock-home paths; substitute the isolated dots home throughout.
 2. Enable Socket Mode, the Messages tab, and direct-message event delivery. Install the app with the scopes needed for owner messages, cards, threads, and attachments. Channel mentions are outside dots v1.
-3. Store bot and app credentials only in the installer-designated local secrets file with mode `0600`, or the macOS keychain. Never paste them into Slack chat, notes, tests, or this repository.
-4. Copy your Slack member ID from your profile and configure it as the sole owner in local config. Match the Hermes allowlist to that owner. Other users cannot command Orca.
-5. Configure your model in the isolated Hermes environment. Start the dots gateway using installer-provided instructions, then open a direct message with Orca.
+3. Store bot and app credentials only in `~/.hermes-dots/secrets.env` with mode `0600`, or the macOS keychain. The installer creates an empty template; it does not populate or automatically load credentials. Use the upstream environment variable names (`SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`) and export them into the gateway process. Never paste credentials into Slack chat, notes, tests, or this repository.
+4. The ID passed with `--owner-slack-id "<your Slack member ID>"` is already stored as the sole owner in local config. Set the Hermes environment allowlist `SLACK_ALLOWED_USERS` to that same member ID before starting the gateway. Other users cannot command Orca.
+5. Configure your model with the isolated launcher. If your protected template contains shell-compatible environment assignments, load it for the foreground gateway as follows, then open a direct message with Orca:
+
+   ```bash
+   set -a
+   . ~/.hermes-dots/secrets.env
+   set +a
+   ~/.hermes-dots/bin/hermes-dots gateway run
+   ```
+
+For a custom `--home`, substitute that home in these paths. The generated login item needs its credential environment configured separately; it does not source `secrets.env`.
 
 The generated login-item plist is not loaded automatically. You choose whether to enable it after reviewing setup. For always-on use, also set Docker Desktop to start at login.
 
