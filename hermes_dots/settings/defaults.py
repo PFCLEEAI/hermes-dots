@@ -14,6 +14,8 @@ SETTINGS_DEFAULTS = {
     "log_retention_days": None,  # Keep logs forever.
     "daily_token_cap": None,
     "display_name": "Orca",
+    'extra_denied_paths': [],
+    'action_rules': {'read': 'auto', 'research': 'auto', 'write': 'auto', 'code': 'auto', 'helpers': 'auto', 'send': 'ask_first', 'post': 'ask_first', 'delete': 'ask_first', 'spend': 'ask_first', 'account': 'ask_first'},
 }
 
 

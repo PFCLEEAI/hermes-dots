@@ -1,0 +1,97 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f7f7fb;
+  --text: #171b32;
+  --muted: #50576f;
+  --line: #d9dce8;
+  --panel: #eeeff8;
+  --accent: #4945b4;
+  --button: #fff;
+  --code-bg: #11162c;
+  --code-text: #e5e8fa;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: 2rem; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 1rem/1.65 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+a { color: var(--accent); text-underline-offset: .25em; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 3px solid var(--accent); outline-offset: 5px; }
+p { margin: 0 0 1.2rem; }
+h1, h2, h3 { line-height: 1.15; letter-spacing: -.04em; }
+h1 { margin: 0 0 1.35rem; font-size: clamp(3rem, 8vw, 6.6rem); font-weight: 650; }
+h2 { margin: 0 0 1.8rem; font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 600; }
+h3 { margin: 0 0 .8rem; font-size: 1.3rem; font-weight: 600; }
+code { font: .88em/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+.shell { width: min(1120px, calc(100% - 3rem)); margin-inline: auto; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1.8rem; }
+.wordmark { display: inline-flex; align-items: center; gap: .65rem; color: var(--text); text-decoration: none; font-weight: 650; letter-spacing: -.03em; }
+.mark { color: var(--accent); font-size: 2.1rem; line-height: 1; letter-spacing: .05em; }
+nav { display: flex; flex-wrap: wrap; gap: 1.4rem; }
+nav a { color: var(--muted); text-decoration: none; font-size: .9rem; }
+.hero { padding-top: 4.5rem; }
+.eyebrow { margin-bottom: 1.2rem; color: var(--accent); font-size: .78rem; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; }
+.hero-line { max-width: 780px; font-size: clamp(1.3rem, 2.7vw, 1.8rem); line-height: 1.4; letter-spacing: -.025em; }
+.intro { max-width: 610px; color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.9rem 0 3rem; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 1rem; min-height: 48px; padding: .7rem 1.2rem; border-radius: 8px; text-decoration: none; font-size: .95rem; font-weight: 600; }
+.primary { background: var(--accent); color: var(--button); }
+.secondary { border: 1px solid var(--line); color: var(--text); }
+.hero-art { margin: 0; overflow: hidden; position: relative; border-radius: 14px; background: #10132b; }
+.hero-art img { display: block; width: 100%; height: auto; }
+.hero-art figcaption { position: absolute; bottom: 1.25rem; left: 1.5rem; color: #e5e8fa; padding: .35rem .65rem; border-radius: 4px; background: #10132be6; font-size: .85rem; }
+.release-note { display: flex; align-items: center; gap: .6rem; margin-top: 1rem; color: var(--muted); font-size: .8rem; }
+.status-dot { flex: 0 0 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.section { padding-block: 5rem; border-bottom: 1px solid var(--line); }
+.section-heading { max-width: 670px; margin-bottom: 2.5rem; }
+.feature { display: grid; grid-template-columns: 45px 250px 1fr; align-items: baseline; gap: 1.2rem; padding-block: 1.5rem; border-top: 1px solid var(--line); }
+.feature h3, .feature p { margin: 0; }
+.feature p, .steps p, .safety-grid p, .roadmap p { color: var(--muted); }
+.number { font: .8rem ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--accent); }
+.steps { list-style: none; counter-reset: steps; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.2rem; padding: 0; margin: 0; }
+.steps li { counter-increment: steps; }
+.steps li::before { content: "0" counter(steps); display: block; color: var(--accent); font: .85rem ui-monospace, SFMono-Regular, Consolas, monospace; margin-bottom: 1.5rem; }
+.steps p { margin-bottom: 0; }
+.quickstart-panel { display: grid; grid-template-columns: 1fr 1.5fr; gap: 2.5rem; padding: 2.5rem; border-radius: 14px; background: var(--panel); }
+.quickstart-panel h2 { margin-bottom: 1rem; }
+.quickstart-panel p { color: var(--muted); }
+.setup { min-width: 0; }
+pre { margin: 0 0 1.5rem; padding: 1.2rem; border-radius: 8px; overflow: auto; background: var(--code-bg); color: var(--code-text); }
+pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.setup ol { padding-left: 1.3rem; }
+.setup li { margin-bottom: .55rem; }
+.small { font-size: .85rem; margin-bottom: 0; }
+.text-link { font-weight: 600; }
+.safety-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
+.safety-note { margin: 1.5rem 0 0; max-width: 800px; color: var(--muted); font-size: .9rem; }
+.roadmap { display: grid; grid-template-columns: 1fr 1.2fr; gap: 3rem; }
+.roadmap ul { margin: 0; padding-left: 1.3rem; }
+.roadmap li { margin-bottom: .85rem; }
+.roadmap li::marker { color: var(--accent); }
+.footer { display: flex; justify-content: space-between; align-items: start; gap: 2rem; padding-block: 3rem; }
+.footer p { margin: .9rem 0 0; color: var(--muted); font-size: .8rem; }
+.skip-link { position: absolute; left: 1rem; top: -10rem; padding: .8rem; background: var(--bg); z-index: 1; }
+.skip-link:focus { top: 1rem; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0d1020; --text: #eef0fa; --muted: #b2b8ce; --line: #2b3147; --panel: #171c31; --accent: #b7b1ff; --button: #15122f; }
+}
+@media (max-width: 800px) {
+  .feature { grid-template-columns: 30px 1fr; gap: .6rem 1rem; }
+  .feature p { grid-column: 2; }
+  .steps { gap: 1.5rem; }
+  .quickstart-panel { grid-template-columns: 1fr; gap: 1.5rem; padding: 1.8rem; }
+  .roadmap { gap: 2rem; }
+}
+@media (max-width: 600px) {
+  .shell { width: calc(100% - 2rem); }
+  .header { align-items: start; flex-direction: column; padding-block: 1.2rem; }
+  nav { gap: 1.2rem; }
+  .hero { padding-top: 2.5rem; }
+  .actions { margin-bottom: 2rem; }
+  .hero-art figcaption { bottom: .6rem; left: .5rem; font-size: .7rem; }
+  .release-note { align-items: baseline; line-height: 1.5; }
+  .section { padding-block: 3rem; }
+  .steps, .safety-grid, .roadmap { grid-template-columns: 1fr; gap: 1.8rem; }
+  .steps li::before { margin-bottom: .7rem; }
+  .quickstart-panel { padding: 1.25rem; }
+  .footer { flex-direction: column; padding-block: 2rem; }
+}

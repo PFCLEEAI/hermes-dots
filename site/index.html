@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="hermes-dots: a dots-style personal assistant for Hermes Agent. Memory, proactive follow-ups, practice email watching, and settings by chat.">
+  <meta name="theme-color" content="#10132b">
+  <title>hermes-dots — connect the dots</title>
+  <link rel="canonical" href="https://pfcleeai.github.io/hermes-dots/">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="header shell">
+    <a class="wordmark" href="#main"><span class="mark" aria-hidden="true">···</span> hermes-dots</a>
+    <nav aria-label="Main navigation">
+      <a href="#features">Features</a>
+      <a href="#quickstart">Get started</a>
+      <a href="https://github.com/PFCLEEAI/hermes-dots">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+  <main id="main">
+    <section class="hero shell" aria-labelledby="hero-title">
+      <p class="eyebrow">One assistant. A little more continuity.</p>
+      <h1 id="hero-title">hermes-dots</h1>
+      <p class="hero-line">A dots-style personal assistant for Hermes Agent — remembers, follows up, and watches your inbox.</p>
+      <p class="intro">Meet Orca. One personal assistant, a brain built from your notes, and a conversation that keeps moving. Open source. Slack first. Your choice of model.</p>
+      <div class="actions">
+        <a class="button primary" href="#quickstart">Connect the dots <span aria-hidden="true">↗</span></a>
+        <a class="button secondary" href="https://github.com/PFCLEEAI/hermes-dots">Explore the source</a>
+      </div>
+      <figure class="hero-art">
+        <img src="assets/hero.webp" width="1600" height="900" alt="A constellation of soft blue and lavender dots connected by thin lines against a calm navy-to-indigo background" fetchpriority="high">
+        <figcaption>A little context. A clearer next step.</figcaption>
+      </figure>
+      <p class="release-note"><span class="status-dot" aria-hidden="true"></span> v1 in development · Practice inbox now · Real Gmail connection later</p>
+    </section>
+
+    <section id="features" class="section shell" aria-labelledby="features-title">
+      <div class="section-heading"><p class="eyebrow">What it does / v1</p><h2 id="features-title">Context that carries forward.</h2></div>
+      <div class="feature-list">
+        <article class="feature"><span class="number" aria-hidden="true">01</span><h3>Remembers with sources</h3><p>Markdown notes, searchable memory, and redacted logs. Orca searches its brain before each task and cites the notes it uses. Your edits win.</p></article>
+        <article class="feature"><span class="number" aria-hidden="true">02</span><h3>Follows up thoughtfully</h3><p>Check-backs come with a time and a reason. Questions come with a recommendation. Other allowed work continues, and nudges respect quiet hours.</p></article>
+        <article class="feature"><span class="number" aria-hidden="true">03</span><h3>Watches the inbox</h3><p>Urgent pings, regular-mail digests, and reply drafts for you to copy. v1 uses practice mail and a mock-tested Gmail read-only adapter. No email sending.</p></article>
+        <article class="feature"><span class="number" aria-hidden="true">04</span><h3>Changes settings by chat</h3><p>“Make quiet hours 22 to 7.” “Digest only at 9.” Orca confirms the new value, then saves it and shows what was stored.</p></article>
+        <article class="feature"><span class="number" aria-hidden="true">05</span><h3>Stays within your rules</h3><p>One owner, an isolated home, Docker for code, and approvals for specific outside actions. Pause or stop from Slack whenever you need to.</p></article>
+      </div>
+    </section>
+
+    <section id="how-it-works" class="section shell" aria-labelledby="how-title">
+      <div class="section-heading"><p class="eyebrow">How it works</p><h2 id="how-title">From a message to a next step.</h2></div>
+      <ol class="steps">
+        <li><h3>Give it a responsibility</h3><p>Tell Orca what you need in Slack. Review a card with the goal, allowed sources, actions, and evidence needed to finish.</p></li>
+        <li><h3>Confirm the plan</h3><p>Orca works within that card, searches memory, and schedules check-backs. Anything needing your approval waits for your yes.</p></li>
+        <li><h3>Keep the thread moving</h3><p>Get updates and digests with sources, open questions, and the next check time. Completed work comes with evidence.</p></li>
+      </ol>
+    </section>
+
+    <section id="quickstart" class="section shell" aria-labelledby="quickstart-title">
+      <div class="quickstart-panel">
+        <div><p class="eyebrow">Quickstart</p><h2 id="quickstart-title">A home of its own.</h2><p>macOS first. Python 3.11+, Git, Docker Desktop, your Slack workspace, and your chosen Hermes model provider.</p><a class="text-link" href="https://github.com/PFCLEEAI/hermes-dots/blob/main/docs/install.md">Read the installation guide <span aria-hidden="true">↗</span></a></div>
+        <div class="setup">
+          <pre><code>git clone https://github.com/PFCLEEAI/hermes-dots.git
+cd hermes-dots
+python3 scripts/install.py --home ~/.hermes-dots</code></pre>
+          <ol><li>Install pinned Hermes in the separate dots home.</li><li>Connect one Slack app and configure yourself as the sole owner.</li><li>Finish onboarding in chat; confirm “Watch the practice inbox.”</li></ol>
+          <p class="small">v1 setup contract; implementation is in progress. Gmail connection comes later, with <code>gmail.readonly</code> only. The login item is generated for you to enable.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="safety" class="section shell" aria-labelledby="safety-title">
+      <div class="section-heading"><p class="eyebrow">Safety</p><h2 id="safety-title">You keep the say.</h2></div>
+      <div class="safety-grid">
+        <div><h3>Boundaries before actions</h3><p>The stock <code>~/.hermes</code> home stays denied. Code runs in non-persistent Docker containers without credential mounts. Sending, deletion outside scratch, spending, and account changes ask first; approvals are specific and single-use.</p></div>
+        <div><h3>Memory you can inspect</h3><p>Notes are Markdown. Logs are redacted and append-only. Forget removes notes and search entries and suppresses re-learning, while retained logs remain. Skill and prompt changes stay proposals until you approve.</p></div>
+      </div>
+      <p class="safety-note">Only needed excerpts go to your configured model provider. Slack receives cards and digests. Local and mock tests do not establish live account operation. <a href="https://github.com/PFCLEEAI/hermes-dots/blob/main/docs/security.md">Read the safety model</a>.</p>
+    </section>
+
+    <section id="roadmap" class="section shell roadmap" aria-labelledby="roadmap-title">
+      <div><p class="eyebrow">Roadmap / later, outside v1</p><h2 id="roadmap-title">Start with one<br>good coworker.</h2><p>Keep the core simple. Expand from there.</p></div>
+      <ul><li>Multiple persistent agents, handoffs, saved workflows, and an independent reviewer</li><li>Chat-first web UI, collapsible sidebar, editable pages, and a visual agent map</li><li>Email sending</li><li>Slack channel mentions</li><li>Server hosting</li><li>Voice</li><li>Formal A/B testing of self-improvements</li></ul>
+    </section>
+  </main>
+  <footer class="footer shell">
+    <div><a class="wordmark" href="#main"><span class="mark" aria-hidden="true">···</span> hermes-dots</a><p>Built on <a href="https://github.com/NousResearch/hermes-agent/tree/v2026.9.24">Hermes Agent by Nous Research (MIT)</a>.</p></div>
+    <nav aria-label="Footer navigation"><a href="https://github.com/PFCLEEAI/hermes-dots/blob/main/LICENSE">MIT license</a><a href="https://github.com/PFCLEEAI/hermes-dots/blob/main/README.md#contributing">Contribute</a><a href="https://github.com/PFCLEEAI/hermes-dots">GitHub ↗</a></nav>
+  </footer>
+</body>
+</html>
