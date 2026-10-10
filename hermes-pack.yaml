@@ -1,8 +1,9 @@
-# Release template. The installer writes an exact-ref copy when --pack-ref is supplied.
-# A release commit containing this integration must be supplied by the owner.
+# Release pack for hermes-dots v0.1.0. The ref is the exact commit that contains the plugin code.
+# The installer writes an exact-ref copy when --pack-ref is supplied.
 name: hermes-dots
 version: 0.1.0
 description: Isolated Orca coworker plugin and local brain provider.
 plugins:
   - name: hermes-dots
-    ref: null
+    repo: https://github.com/PFCLEEAI/hermes-dots
+    ref: 49d866523cf0c16b40685c3d83fcefdaa580e7ae
