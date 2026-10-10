@@ -1,0 +1,142 @@
+[
+  {
+    "account": "practice",
+    "message_id": "voice-01",
+    "thread_id": "voice-thread-01",
+    "sender": "owner@example.com",
+    "to": [
+      "alex@example.com"
+    ],
+    "subject": "Acme workshop",
+    "body": "Thanks, Alex. Confirmed for Monday at 10:00. See you then!",
+    "date": "2026-10-01T09:00:00+00:00",
+    "direction": "sent",
+    "unread": false
+  },
+  {
+    "account": "practice",
+    "message_id": "voice-02",
+    "thread_id": "voice-thread-02",
+    "sender": "owner@example.com",
+    "to": [
+      "alex@example.com"
+    ],
+    "subject": "Acme workshop",
+    "body": "Hi Alex, the Acme summary is attached. Thanks for your patience.",
+    "date": "2026-10-02T09:00:00+00:00",
+    "direction": "sent",
+    "unread": false
+  },
+  {
+    "account": "practice",
+    "message_id": "voice-03",
+    "thread_id": "voice-thread-03",
+    "sender": "owner@example.com",
+    "to": [
+      "alex@example.com"
+    ],
+    "subject": "Acme workshop",
+    "body": "Thanks for the options. I prefer the first topic. Best, Owner",
+    "date": "2026-10-03T09:00:00+00:00",
+    "direction": "sent",
+    "unread": false
+  },
+  {
+    "account": "practice",
+    "message_id": "voice-04",
+    "thread_id": "voice-thread-04",
+    "sender": "owner@example.com",
+    "to": [
+      "alex@example.com"
+    ],
+    "subject": "Acme workshop",
+    "body": "Hi Alex, could we move our workshop to next week? Thanks!",
+    "date": "2026-10-04T09:00:00+00:00",
+    "direction": "sent",
+    "unread": false
+  },
+  {
+    "account": "practice",
+    "message_id": "voice-05",
+    "thread_id": "voice-thread-05",
+    "sender": "owner@example.com",
+    "to": [
+      "alex@example.com"
+    ],
+    "subject": "Acme workshop",
+    "body": "The notes are ready. Here is the final summary. Thanks, Owner",
+    "date": "2026-10-05T09:00:00+00:00",
+    "direction": "sent",
+    "unread": false
+  },
+  {
+    "account": "practice",
+    "message_id": "voice-06",
+    "thread_id": "voice-thread-06",
+    "sender": "owner@example.com",
+    "to": [
+      "mina@example.com"
+    ],
+    "subject": "Acme 워크숍",
+    "body": "안녕하세요. 월요일 오전 10시로 확정했습니다. 감사합니다.",
+    "date": "2026-10-06T09:00:00+00:00",
+    "direction": "sent",
+    "unread": false
+  },
+  {
+    "account": "practice",
+    "message_id": "voice-07",
+    "thread_id": "voice-thread-07",
+    "sender": "owner@example.com",
+    "to": [
+      "mina@example.com"
+    ],
+    "subject": "Acme 워크숍",
+    "body": "Acme 요약을 첨부합니다. 기다려 주셔서 감사합니다.",
+    "date": "2026-10-07T09:00:00+00:00",
+    "direction": "sent",
+    "unread": false
+  },
+  {
+    "account": "practice",
+    "message_id": "voice-08",
+    "thread_id": "voice-thread-08",
+    "sender": "owner@example.com",
+    "to": [
+      "mina@example.com"
+    ],
+    "subject": "Acme 워크숍",
+    "body": "제안 감사합니다. 첫 번째 주제가 좋겠습니다.",
+    "date": "2026-10-08T09:00:00+00:00",
+    "direction": "sent",
+    "unread": false
+  },
+  {
+    "account": "practice",
+    "message_id": "voice-09",
+    "thread_id": "voice-thread-09",
+    "sender": "owner@example.com",
+    "to": [
+      "mina@example.com"
+    ],
+    "subject": "Acme 워크숍",
+    "body": "안녕하세요. 워크숍을 다음 주로 옮길 수 있을까요? 감사합니다.",
+    "date": "2026-10-09T09:00:00+00:00",
+    "direction": "sent",
+    "unread": false
+  },
+  {
+    "account": "practice",
+    "message_id": "voice-10",
+    "thread_id": "voice-thread-10",
+    "sender": "owner@example.com",
+    "to": [
+      "mina@example.com"
+    ],
+    "subject": "Acme 워크숍",
+    "body": "자료 준비가 끝났습니다. 최종 요약을 보내 드립니다. 감사합니다.",
+    "date": "2026-10-10T09:00:00+00:00",
+    "direction": "sent",
+    "unread": false
+  }
+]
