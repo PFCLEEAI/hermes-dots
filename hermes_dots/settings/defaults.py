@@ -16,6 +16,8 @@ SETTINGS_DEFAULTS = {
     "display_name": "Orca",
     'extra_denied_paths': [],
     'action_rules': {'read': 'auto', 'research': 'auto', 'write': 'auto', 'code': 'auto', 'helpers': 'auto', 'send': 'ask_first', 'post': 'ask_first', 'delete': 'ask_first', 'spend': 'ask_first', 'account': 'ask_first'},
+    "vips": [],
+    "first_responsibility": None,
 }
 
 
