@@ -168,3 +168,49 @@ def test_logs_and_handler_redact(bridge, fake_slack):
     service.receive(fake_slack.message(f"Check {secret_shape}", thread_ts="1"))
     assert secret_shape not in repr(events)
     assert secret_shape not in repr(handled)
+
+
+@pytest.mark.parametrize("text", ["status", "settings", "rules", "schedules", "stop TASK-1", "forget Acme"])
+def test_commands_in_thread_retain_revision(bridge, fake_slack, text):
+    service, _, handled = bridge
+    service.bind_card(fake_slack.channel, "new", "TASK-1", 2)
+    route = service.receive(fake_slack.message(text, thread_ts="1"))
+    assert route.kind == "command" and route.binding == Binding("TASK-1", 1)
+    assert handled == [route]
+
+
+@pytest.mark.parametrize("text", ["status", "stop TASK-2", "stop #TASK-2"])
+def test_unresolved_or_conflicting_thread_command_asks(bridge, fake_slack, text):
+    service, _, handled = bridge
+    thread = "unknown" if text == "status" else "1"
+    assert service.receive(fake_slack.message(text, thread_ts=thread)).kind == "question"
+    assert not handled
+
+
+@pytest.mark.parametrize("command", ["pause", "resume"])
+def test_pause_resume_remain_global_with_card_reference(bridge, fake_slack, command):
+    service, _, _ = bridge
+    route = service.receive(fake_slack.message(f"{command} #TASK-1", thread_ts="1"))
+    assert route.kind == "command" and route.binding is None
+
+
+@pytest.mark.parametrize("payload", [
+    {"action": "invalid"}, {"action": {"action_id": None}},
+    {"actions": {"action_id": "dots_approve"}},
+    {"action": {"action_id": "dots_approve", "value": "null"}},
+    {"action": {"action_id": "dots_approve", "value": "[]"}},
+    {"action": {"action_id": "dots_approve", "value": '{"task_id":"TASK-1","revision":1}'},
+     "message": "invalid"}, {"text": None},
+])
+def test_malformed_owner_event_asks_without_dispatch(bridge, fake_slack, payload):
+    service, _, handled = bridge
+    event = {"user": fake_slack.owner_id, "channel": fake_slack.channel, **payload}
+    assert service.receive(event).kind == "question"
+    assert not handled
+
+
+def test_status_renders_engine_next_time():
+    status = render_status([{"id": "TASK-1", "state": "working", "next_time": "08:00"}])
+    assert "Next action time: 08:00" in status
+    status = render_status([{"id": "TASK-1", "next_time": "08:00", "next_action_at": "09:00"}])
+    assert "Next action time: 09:00" in status

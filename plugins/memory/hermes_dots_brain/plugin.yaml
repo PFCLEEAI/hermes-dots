@@ -1,0 +1,4 @@
+name: hermes_dots_brain
+version: 0.1.0
+description: Local Markdown brain with bounded cited recall.
+license: MIT

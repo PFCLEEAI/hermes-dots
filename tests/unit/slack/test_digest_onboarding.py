@@ -1,6 +1,7 @@
 """Registered digest sections and setup with a local settings-service stub."""
 
 import pytest
+from zoneinfo import ZoneInfoNotFoundError
 
 from hermes_dots.ledger import Card
 from hermes_dots.slack import DigestComposer, Onboarding, SECTIONS, render_card
@@ -111,3 +112,49 @@ def test_vip_list_and_failed_storage_does_not_advance():
     with pytest.raises(OSError):
         chat.answer("owner", "yes")
     assert not chat.complete and chat.pending is not None
+
+
+def test_digest_sections_match_spec_order():
+    assert [key for key, _ in SECTIONS] == [
+        "regular_mail", "uncertain_mail", "noise", "ideas", "learned", "conflicts",
+        "promotions", "proposals", "questions", "replied_still_open", "missed_runs", "health", "usage",
+    ]
+
+
+@pytest.mark.parametrize("empty", [None, "", [], [None, ""]])
+def test_empty_digest_provider_keeps_usage_fallback(empty):
+    composer = DigestComposer()
+    composer.register("usage", lambda: empty)
+    assert composer.compose()["text"].endswith("Model calls / tokens: unavailable.")
+
+
+def test_digest_zero_noise_is_preserved():
+    composer = DigestComposer()
+    composer.register("noise", lambda: 0)
+    assert "Noise count / show list\n0\nIdeas" in composer.compose()["text"]
+
+
+def test_onboarding_unknown_timezone_stays_at_question():
+    settings = StubSettings()
+
+    def invalid_zone(*_):
+        raise ZoneInfoNotFoundError("Unknown time zone")
+
+    settings.propose_change = invalid_zone
+    chat = Onboarding(settings, owner_id="owner")
+    assert "invalid" in chat.answer("owner", "Unknown/Zone")
+    assert chat.index == 0 and chat.pending is None
+
+
+def test_onboarding_uses_settings_confirm_reply():
+    settings = StubSettings()
+
+    def confirm(proposal):
+        settings.stored[proposal["name"]] = proposal["value"]
+        return {"name": proposal["name"], "value": proposal["value"], "reply": "Stored timezone: UTC"}
+
+    settings.confirm_change = confirm
+    chat = Onboarding(settings, owner_id="owner")
+    chat.answer("owner", "UTC")
+    assert chat.answer("owner", "yes") == f"Stored timezone: UTC\n{chat.prompt()}"
+    assert settings.stored == {"timezone": "UTC"}

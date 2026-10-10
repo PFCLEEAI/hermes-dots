@@ -1,3 +1,22 @@
 name: hermes-dots
 version: 0.1.0
+manifest_version: 2
+description: Orca coworker loop, isolated brain and read-only practice email.
 license: MIT
+provides_tools:
+  - dots_brain_search
+  - dots_brain_write
+  - dots_task
+  - dots_settings
+  - dots_schedule
+  - dots_helper
+  - dots_tick
+provides_hooks:
+  - pre_tool_call
+  - subagent_start
+  - subagent_stop
+  - transform_tool_result
+  - post_tool_call
+  - post_llm_call
+  - pre_gateway_dispatch
+  - on_session_end

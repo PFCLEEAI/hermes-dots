@@ -158,3 +158,35 @@ def test_redact_before_outbox_logs_and_send(ledger, fake_slack, fake_clock):
     assert secret_shape not in repr(ledger.list_effects())
     assert secret_shape not in repr(ledger.list_events())
     assert secret_shape not in repr(fake_slack.posts)
+
+
+def test_all_ping_types_hold_and_release_in_order(ledger, fake_slack, fake_clock):
+    fake_clock.set(datetime(2026, 10, 12, 23, 30, tzinfo=timezone.utc))
+    dispatcher = make_dispatcher(ledger, fake_slack, fake_clock)
+    for kind in ("urgent mail", "nudge", "health"):
+        dispatcher.dispatch(fake_slack.channel, kind, idempotency_key=kind)
+    assert not fake_slack.posts and len(ledger.list_events()) == 3
+    fake_clock.set(datetime(2026, 10, 13, 8, tzinfo=timezone.utc))
+    dispatcher.flush()
+    assert [post["text"] for post in fake_slack.posts] == ["urgent mail", "nudge", "health"]
+
+
+def test_matching_delivery_in_incomplete_history_is_sent(ledger, fake_slack):
+    effect = unknown(ledger, fake_slack)
+    receipt = SlackReconciler(fake_slack).send(effect)
+    messages = fake_slack.history(channel=fake_slack.channel)
+    fake_slack.history = lambda **_: {"ok": True, "messages": messages, "has_more": True}
+    result = ledger.reconcile_unknown(effect.delivery_id, SlackReconciler(fake_slack))
+    assert result.state == OutboxState.SENT and result.receipt == receipt
+    assert len(fake_slack.posts) == 1
+
+
+def test_unknown_delivery_not_resent_in_quiet_hours(ledger, fake_slack, fake_clock):
+    effect = unknown(ledger, fake_slack)
+    fake_clock.set(datetime(2026, 10, 12, 23, 30, tzinfo=timezone.utc))
+    dispatcher = make_dispatcher(ledger, fake_slack, fake_clock)
+    assert dispatcher.reconcile(effect.delivery_id).state == OutboxState.UNKNOWN
+    assert not fake_slack.posts
+    fake_clock.set(datetime(2026, 10, 13, 8, tzinfo=timezone.utc))
+    assert dispatcher.reconcile(effect.delivery_id).state == OutboxState.SENT
+    assert len(fake_slack.posts) == 1

@@ -1,7 +1,8 @@
 """Short owner-only setup chat, with confirm-before-store through T5."""
 
 import re
-from typing import Protocol
+from typing import Mapping, Protocol
+from zoneinfo import ZoneInfoNotFoundError
 
 from .delivery import redact_payload
 
@@ -52,6 +53,8 @@ class Onboarding:
                 stored = self.settings.confirm_change(proposal)
                 self.pending = None
                 self.index += 1
+                if isinstance(stored, Mapping) and "reply" in stored:
+                    return redact_payload(f"{stored['reply']}\n{self.prompt()}")
                 return redact_payload(f"Stored {key}: {stored if stored is not None else value}\n{self.prompt()}")
             if text.lower() in {"no", "cancel"}:
                 self.pending = None
@@ -73,7 +76,7 @@ class Onboarding:
             value = text
         try:
             proposal = self.settings.propose_change(key, value)
-        except ValueError:
+        except (ValueError, ZoneInfoNotFoundError):
             return f"That setting is invalid. {self.prompt()}"
         self.pending = proposal, key, value
         return f"Set {key} to {value}? Reply yes to confirm."

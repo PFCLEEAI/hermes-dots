@@ -92,12 +92,14 @@ class SlackBridge:
             channel = channel.get("id", "")
         action = event.get("action")
         if action is None and event.get("actions"):
-            if len(event["actions"]) != 1:
+            if not isinstance(event["actions"], (list, tuple)) or len(event["actions"]) != 1:
                 return self._question()
             action = event["actions"][0]
         if action is not None:
             route = self._route_action(event, channel, action)
         else:
+            if not isinstance(safe.get("text", ""), str):
+                return self._question("Please send a text instruction or use a card button.")
             text = safe.get("text", "").strip()
             refs = CARD_REF.findall(text)
             clean_text = CARD_REF.sub("", text).strip()
@@ -107,12 +109,14 @@ class SlackBridge:
                 command = parse_command(text if head in {"stop", "forget"} else clean_text)
             except ValueError as exc:
                 return self._question(str(exc))
-            # Pause/resume and other global commands work even from a card thread.
-            if command is not None and not refs:
+            thread_ts = event.get("thread_ts")
+            # Pause/resume always apply to everything; other thread replies
+            # retain the card's task and revision, including commands.
+            if command is not None and (command.name in {"pause", "resume"} or
+                                        (not refs and not thread_ts)):
                 route = Route("command", text, command=command)
             else:
                 bindings = []
-                thread_ts = event.get("thread_ts")
                 if thread_ts:
                     binding = self.threads.get((channel, thread_ts))
                     if binding is None:
@@ -125,6 +129,8 @@ class SlackBridge:
                     bindings.append(binding)
                 if not bindings or len(set(bindings)) != 1:
                     return self._question()
+                if command and command.name == "stop" and command.argument.lstrip("#") != bindings[0].task_id:
+                    return self._question()
                 route = Route("command" if command else "instruction", text,
                               command=command, binding=bindings[0])
         if route.kind not in {"question", "ignored"} and self.handler:
@@ -132,19 +138,26 @@ class SlackBridge:
         return route
 
     def _route_action(self, event, channel, action) -> Route:
+        if not isinstance(action, Mapping):
+            return self._question("Invalid card action. Please use the current card.")
         action_id = action.get("action_id", "")
+        if not isinstance(action_id, str):
+            return self._question("Unknown card action.")
         name = action_id.removeprefix("dots_")
         if not action_id.startswith("dots_") or name not in ACTION_LABELS:
             return self._question("Unknown card action.")
         try:
             value = json.loads(action["value"])
+            if not isinstance(value, Mapping):
+                raise ValueError("Invalid binding")
             task_id, revision = value["task_id"], value["revision"]
             if not isinstance(task_id, str) or type(revision) is not int or revision < 1:
                 raise ValueError("Invalid binding")
             binding = Binding(task_id, revision)
         except (KeyError, TypeError, ValueError):
             return self._question("Invalid card action. Please use the current card.")
-        message_ts = event.get("message_ts") or event.get("message", {}).get("ts")
+        message = event.get("message") or {}
+        message_ts = event.get("message_ts") or (message.get("ts") if isinstance(message, Mapping) else None)
         if (self.threads.get((channel, message_ts)) != binding or
                 self.cards.get((channel, task_id)) != binding):
             return self._question("This card action is stale or ambiguous. Please use the current card.")

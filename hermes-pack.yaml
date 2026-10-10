@@ -1,0 +1,8 @@
+# Release template. The installer writes an exact-ref copy when --pack-ref is supplied.
+# A release commit containing this integration must be supplied by the owner.
+name: hermes-dots
+version: 0.1.0
+description: Isolated Orca coworker plugin and local brain provider.
+plugins:
+  - name: hermes-dots
+    ref: null

@@ -1,0 +1,21 @@
+{
+  "terminal": {
+    "backend": "docker",
+    "cwd": "/workspace",
+    "container_persistent": false,
+    "docker_persist_across_processes": false,
+    "docker_mount_cwd_to_workspace": false,
+    "docker_volumes": ["{workspace}:/workspace:rw"],
+    "credential_files": [],
+    "docker_forward_env": [],
+    "docker_env": {},
+    "docker_extra_args": []
+  },
+  "memory": {"provider": "hermes_dots_brain", "write_approval": true},
+  "skills": {"write_approval": true, "external_dirs": [], "project_discovery": false, "trusted_project_dirs": []},
+  "cron": {"catch_up_missed": false},
+  "plugins": {
+    "enabled": ["hermes-dots", "hermes_dots_brain"],
+    "entries": {"hermes-dots": {"allow_gateway_injection": true}}
+  }
+}

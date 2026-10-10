@@ -30,3 +30,8 @@ def merge_defaults(*dicts):
                 raise ValueError(f"Conflicting setting default: {key}")
             merged[key] = value
     return merged
+
+
+# Module-local defaults collected by the T8 wiring step.
+MODULE_DEFAULTS = {'index_times': ['08:30', '17:30'], 'log_retention_days': None, 'mail_check_interval_seconds': 300, 'snooze_days': 1, 'idea_expiry_days': 7, 'vips': [], 'extra_denied_paths': [], 'action_rules': {'read': 'auto', 'research': 'auto', 'write': 'auto', 'code': 'auto', 'helpers': 'auto', 'send': 'ask_first', 'post': 'ask_first', 'delete': 'ask_first', 'spend': 'ask_first', 'account': 'ask_first'}, 'first_responsibility': None}
+SETTINGS_DEFAULTS = merge_defaults(SETTINGS_DEFAULTS, MODULE_DEFAULTS)

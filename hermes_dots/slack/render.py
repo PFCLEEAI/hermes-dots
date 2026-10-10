@@ -39,7 +39,7 @@ def render_status(tasks: Sequence[Mapping], *, unknown_deliveries: Sequence[str]
             f"Last successful step: {_display(task.get('last_successful_step'))}",
             f"Waiting on: {_display(task.get('waiting_on'))}",
             f"Next action: {_display(task.get('next_action'))}",
-            f"Next action time: {_display(task.get('next_action_at'))}",
+            f"Next action time: {_display(task.get('next_action_at', task.get('next_time')))}",
             f"Files: {_display(task.get('files'))}",
         ])
     if not tasks:

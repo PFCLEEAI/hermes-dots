@@ -33,6 +33,7 @@ class DigestComposer:
             for provider in self.providers[key]:
                 result = provider()
                 items.extend(result if isinstance(result, (list, tuple)) else [result])
+            items = [item for item in items if item is not None and item != ""]
             for item in items:
                 if isinstance(item, dict):
                     text.append(str(item.get("text", "")))
