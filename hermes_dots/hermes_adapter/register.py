@@ -11,6 +11,7 @@ HOOK_MODULES: list[str] = [
     "dots_mark_handled",
     "dots_undo_learned",
     "dots_pick_version",
+    "dots_show_noise",
 ]
 
 

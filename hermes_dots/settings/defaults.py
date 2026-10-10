@@ -22,11 +22,11 @@ SETTINGS_DEFAULTS = {
 
 
 def merge_defaults(*dicts):
-    """Merge module defaults, rejecting any duplicate setting key."""
+    """Merge module defaults idempotently, rejecting conflicting values."""
     merged = {}
     for defaults in dicts:
         for key, value in defaults.items():
-            if key in merged:
-                raise ValueError(f"Duplicate setting default: {key}")
+            if key in merged and merged[key] != value:
+                raise ValueError(f"Conflicting setting default: {key}")
             merged[key] = value
     return merged
