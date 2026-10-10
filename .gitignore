@@ -1,0 +1,10 @@
+_pm/
+.dryforge/
+.env*
+.venv/
+*.sqlite
+*.sqlite-*
+__pycache__/
+.pytest_cache/
+data/
+.hermes-dots/

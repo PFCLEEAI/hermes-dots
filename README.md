@@ -1,0 +1,1 @@
+hermes-dots is an open-source, dots-style plugin pack for Hermes Agent (MIT), providing a personal assistant called Orca with memory, proactive follow-ups, email watching and settings by chat. This repository currently contains the initial scaffold; implementation and installation documentation will follow.

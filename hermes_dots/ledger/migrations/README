@@ -1,0 +1,1 @@
+Number migrations with zero-padded prefixes (0001_init.sql, 0002_...), applied in filename order.
